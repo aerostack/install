@@ -106,7 +106,7 @@ cp /opt/ros/$ROS_DISTRO/share/catkin/cmake/toplevel.cmake CMakeLists.txt
 echo "-------------------------------------------------------"
 echo "Installing dependencies"
 echo "-------------------------------------------------------"
-."$BASEDIR"/install_dependencies.sh
+. "$BASEDIR"/install_dependencies.sh
 echo "-------------------------------------------------------"
 echo "Compiling the Aerostack"
 echo "-------------------------------------------------------"
