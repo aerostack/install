@@ -1,8 +1,7 @@
 #!/bin/bash
 
 #######################
-BASEDIR=$(dirname "$0")
-export BASEDIR=$BASEDIR
+BASEDIR=$PWD
 if [ "$#" -eq 0 ]; then
 	echo "Please input a valid .repos file path"
 	exit 1;
@@ -62,7 +61,7 @@ else
 	AEROSTACK_WORKSPACE="$HOME/workspace/ros/aerostack_catkin_ws"
 fi
 
-AEROSTACK_STACK="$AEROSTACK_WORKSPACE/src/aerostack_stack"
+AEROSTACK_STACK="$AEROSTACK_WORKSPACE/src"
 export AEROSTACK_WORKSPACE=$AEROSTACK_WORKSPACE
 export AEROSTACK_STACK=$AEROSTACK_STACK
 
@@ -81,8 +80,6 @@ mkdir -p $AEROSTACK_WORKSPACE
 mkdir -p $AEROSTACK_STACK
 cd $AEROSTACK_WORKSPACE/src
 vcs import --recursive < "$1"
-
-
 
 echo "------------------------------------------------------"
 echo "Creating the ROS Workspace"
@@ -109,16 +106,15 @@ cp /opt/ros/$ROS_DISTRO/share/catkin/cmake/toplevel.cmake CMakeLists.txt
 echo "-------------------------------------------------------"
 echo "Installing dependencies"
 echo "-------------------------------------------------------"
-. ${BASEDIR}/install_dependencies.sh
+."$BASEDIR"/install_dependencies.sh
 echo "-------------------------------------------------------"
 echo "Compiling the Aerostack"
 echo "-------------------------------------------------------"
-. ${AEROSTACK_STACK}/config/setup.sh
 cd ${AEROSTACK_WORKSPACE}
-[ ! -f "$AEROSTACK_STACK/stack/behaviors/behavior_packages/multi_sensor_fusion" ] && touch "$AEROSTACK_STACK/stack/behaviors/behavior_packages/multi_sensor_fusion/CATKIN_IGNORE"
+[ ! -f "$AEROSTACK_STACK/behaviors/behavior_packages/multi_sensor_fusion" ] && touch "$AEROSTACK_STACK/behaviors/behavior_packages/multi_sensor_fusion/CATKIN_IGNORE"
 catkin_make
 
-[ -f "$AEROSTACK_STACK/stack/behaviors/behavior_packages/multi_sensor_fusion/CATKIN_IGNORE" ] && rm "$AEROSTACK_STACK/stack/behaviors/behavior_packages/multi_sensor_fusion/CATKIN_IGNORE"
+[ -f "$AEROSTACK_STACK/behaviors/behavior_packages/multi_sensor_fusion/CATKIN_IGNORE" ] && rm "$AEROSTACK_STACK/behaviors/behavior_packages/multi_sensor_fusion/CATKIN_IGNORE"
 catkin_make -j1
 
 grep -q "source $AEROSTACK_WORKSPACE/devel/setup.bash" $HOME/.bashrc || echo "source $AEROSTACK_WORKSPACE/devel/setup.bash" >> $HOME/.bashrc
