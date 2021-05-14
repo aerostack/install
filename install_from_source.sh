@@ -29,6 +29,17 @@ else
 	fi
 fi
 
+if ! command -v vcs &> /dev/null; then
+    echo "vcs could not be found"
+	echo "installing vcs_tool..."
+	sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+	sudo apt-key adv --keyserver hkp://pool.sks-keyservers.net --recv-key 0xAB17C654
+	sudo apt-get update
+	sudo apt-get install python3-vcstool
+else 
+	echo "vcs installed"
+fi
+
 
 # Check if dpkg database is locked and ros melodic or ros kinetic is installed
 VERSION="$(rosversion -d)"
