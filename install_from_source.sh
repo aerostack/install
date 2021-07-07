@@ -40,31 +40,6 @@ else
 	echo "vcs installed"
 fi
 
-
-# Check if dpkg database is locked and ros melodic or ros kinetic is installed
-VERSION="$(rosversion -d)"
-if [ -z "$VERSION" ];then
-	VERSION=$ROS_DISTRO
-fi
-if [ ! "$VERSION" = 'melodic' ] && [ ! "$ROS_DISTRO" = 'kinetic' ]; then
-	if [ -z "$VERSION" ];then
-		echo "Ros is not installed"
-		exit 1
-	fi
-	echo "Ros $VERSION is not supported"
-	exit 1
-fi
-sudo apt-get -y install ros-$ROS_DISTRO-mavlink &>/dev/null
-if [ "$?" -ne 0 ]; then
-	echo $(sudo apt-get --simulate install ros-$ROS_DISTRO-mavlink) &>/dev/null
-	if [ "$?" -ne 0 ]; then
-		echo "Failed to accept software from packages.ros.org"
-	fi
-	echo "$(sudo apt-get -y install ros-$ROS_DISTRO-mavlink)"
-	echo "Unable to install Aerostack ros dependencies, cancelling installation"
-	exit 1
-fi
-
 # Absolute path of the aerostack workspace
 if [ "$#" -eq 2 ]; then
 	AEROSTACK_WORKSPACE="$2/workspace/ros/aerostack_catkin_ws"
@@ -76,11 +51,7 @@ AEROSTACK_STACK="$AEROSTACK_WORKSPACE/src"
 export AEROSTACK_WORKSPACE=$AEROSTACK_WORKSPACE
 export AEROSTACK_STACK=$AEROSTACK_STACK
 
-if [[ `lsb_release -rs` == "18.04" ]]; then
-	ROS_DISTRO="melodic"
-else
-	ROS_DISTRO="kinetic"
-fi
+ROS_DISTRO="noetic"
 export ROS_DISTRO=$ROS_DISTRO
 
 
@@ -91,6 +62,24 @@ mkdir -p $AEROSTACK_WORKSPACE
 mkdir -p $AEROSTACK_STACK
 cd $AEROSTACK_WORKSPACE/src
 vcs import --recursive < "$1"
+
+
+echo "-------------------------------------------------------"
+echo "Setting environment variables"
+echo "-------------------------------------------------------"
+
+
+grep -q "source $AEROSTACK_WORKSPACE/devel/setup.bash" $HOME/.bashrc || echo "source $AEROSTACK_WORKSPACE/devel/setup.bash" >> $HOME/.bashrc
+sed -i '/export AEROSTACK_STACK/d' $HOME/.bashrc && echo "export AEROSTACK_STACK=$AEROSTACK_WORKSPACE/src/aerostack_stack" >> $HOME/.bashrc
+sed -i '/export AEROSTACK_WORKSPACE/d' $HOME/.bashrc && echo "export AEROSTACK_WORKSPACE=$AEROSTACK_WORKSPACE" >> $HOME/.bashrc
+sed -i '/export LD_LIBRARY_PATH/d' $HOME/.bashrc && echo "export LD_LIBRARY_PATH=$AEROSTACK_WORKSPACE/devel/lib:/opt/ros/$ROS_DISTRO/lib:$AEROSTACK_WORKSPACE/devel/lib/parrot_arsdk" >> $HOME/.bashrc
+
+
+echo "-------------------------------------------------------"
+echo "Installing dependencies"
+echo "-------------------------------------------------------"
+
+. "$BASEDIR"/install_dependencies.sh
 
 echo "------------------------------------------------------"
 echo "Creating the ROS Workspace"
@@ -114,10 +103,7 @@ cd $AEROSTACK_WORKSPACE/src
 rm CMakeLists.txt
 cp /opt/ros/$ROS_DISTRO/share/catkin/cmake/toplevel.cmake CMakeLists.txt
 
-echo "-------------------------------------------------------"
-echo "Installing dependencies"
-echo "-------------------------------------------------------"
-. "$BASEDIR"/install_dependencies.sh
+
 echo "-------------------------------------------------------"
 echo "Compiling the Aerostack"
 echo "-------------------------------------------------------"
@@ -128,7 +114,3 @@ catkin_make
 [ -f "$AEROSTACK_STACK/behaviors/behavior_packages/multi_sensor_fusion/CATKIN_IGNORE" ] && rm "$AEROSTACK_STACK/behaviors/behavior_packages/multi_sensor_fusion/CATKIN_IGNORE"
 catkin_make -j1
 
-grep -q "source $AEROSTACK_WORKSPACE/devel/setup.bash" $HOME/.bashrc || echo "source $AEROSTACK_WORKSPACE/devel/setup.bash" >> $HOME/.bashrc
-sed -i '/export AEROSTACK_STACK/d' $HOME/.bashrc && echo "export AEROSTACK_STACK=$AEROSTACK_WORKSPACE/src/aerostack_stack" >> $HOME/.bashrc
-sed -i '/export AEROSTACK_WORKSPACE/d' $HOME/.bashrc && echo "export AEROSTACK_WORKSPACE=$AEROSTACK_WORKSPACE" >> $HOME/.bashrc
-sed -i '/export LD_LIBRARY_PATH/d' $HOME/.bashrc && echo "export LD_LIBRARY_PATH=$AEROSTACK_WORKSPACE/devel/lib:/opt/ros/$ROS_DISTRO/lib:$AEROSTACK_WORKSPACE/devel/lib/parrot_arsdk" >> $HOME/.bashrc

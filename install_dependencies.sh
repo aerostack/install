@@ -1,12 +1,19 @@
 #!/bin/bash
 
 echo "-----------------------"
+echo "Installing python packages and qt"
+echo "-----------------------"
+
+sudo apt-get -y install python3-toml python3-jinja2 python3-packaging
+sudo apt-get -y install libqt5svg5-dev
+
+echo "-----------------------"
 echo "Installing ncurses"
 echo "-----------------------"
 sudo apt-get -y install libncurses5
 sudo apt-get -y install ncurses-bin
+sudo apt-get -y install libncurses5-dev libncursesw5-dev
 sudo apt-get -y install ncurses-dev
-sudo apt-get -y install libncursesw5-dev
 
 echo "-----------------------"
 echo "Installing boost"
@@ -39,10 +46,23 @@ sudo apt-get -y install libsdl-image1.2-dev
 sudo apt-get -y install libudev-dev
 sudo apt-get -y install libiw-dev
 
-if [ "$ROS_DISTRO" = "kinetic" ]
-then
+
+sudo apt-get -y install ros-$ROS_DISTRO-mavlink &>/dev/null
+if [ "$?" -ne 0 ]; then
+	echo $(sudo apt-get --simulate install ros-$ROS_DISTRO-mavlink) &>/dev/null
+	if [ "$?" -ne 0 ]; then
+		echo "Failed to accept software from packages.ros.org"
+	fi
+	echo "$(sudo apt-get -y install ros-$ROS_DISTRO-mavlink)"
+	echo "Unable to install Aerostack ros dependencies, cancelling installation"
+	exit 1
+fi
+
+
+if [ "$ROS_DISTRO" = "noetic" ]
+	then
 	echo "----------------------------"
-	echo "Install driver common required in kinectic"
+	echo "Install driver common required in noetic"
 	echo "----------------------------"
 	mkdir -p /tmp/driver_common/src
 	cd /tmp/driver_common/src
@@ -54,7 +74,7 @@ then
 	rm -rf /tmp/driver_common
 
 	echo "----------------------------"
-	echo "Install keyboard required in kinectic"
+	echo "Install keyboard required in noetic"
 	echo "----------------------------"
 	mkdir -p /tmp/keyboard/src
 	cd /tmp/keyboard/src
@@ -64,20 +84,52 @@ then
 	sudo cp -R /tmp/ros/$ROS_DISTRO /opt/ros/
 	rm -rf /tmp/ros
 	rm -rf /tmp/keyboard
-
-	echo "---------------------------"
-	echo "Installing Sound Play & Dependencies"
-	echo "---------------------------"
-	sudo apt-get -y install ros-$ROS_DISTRO-audio-common
-	sudo apt-get -y install libgstreamer0.10-dev libgstreamer-plugins-base0.10-dev
-
+	
 	echo "------------------------------------------------------"
 	echo "Installing qwt library"
 	echo "------------------------------------------------------"
-	sudo apt-get -y install libqwt-headers
-	sudo apt-get -y install libqwt-qt5-dev
-	sudo apt-get -y install libzbar-dev
-		
+	sudo apt-get -y install git build-essential cmake qt5-default qtscript5-dev libssl-dev qttools5-dev qttools5-dev-tools qtmultimedia5-dev libqt5svg5-dev libqt5webkit5-dev libsdl2-dev libasound2 libxmu-dev libxi-dev freeglut3-dev libasound2-dev libjack-jackd2-dev libxrandr-dev libqt5xmlpatterns5-dev libqt5xmlpatterns5
+
+	echo "---------------------------"
+	echo "Installing opencv_apps"
+	echo "---------------------------"
+	sudo apt-get -y install ros-opencv-apps
+
+	echo "---------------------------"
+	echo "Installing joystick_drivers"
+	echo "---------------------------"
+	sudo apt-get -y install ros-noetic-joystick-drivers
+
+	echo "---------------------------"
+	echo "Installing lib_usb"
+	echo "---------------------------"
+	sudo apt-get -y install libusb-dev
+
+	echo "---------------------------"
+	echo "Installing octomap"
+	echo "---------------------------"
+	sudo apt-get -y install ros-noetic-octomap ros-noetic-octomap-msgs 
+
+	echo "---------------------------"
+	echo "Installing spnav"
+	echo "---------------------------"
+	sudo apt-get -y install libspnav-dev 
+
+	echo "---------------------------"
+	echo "Installing cwiid"
+	echo "---------------------------"
+	sudo apt install libcwiid-dev 
+
+	echo "---------------------------"
+	echo "Updating mavros logging system"
+	echo "---------------------------"
+	cd $AEROSTACK_STACK/stack/hardware_interface/drivers_platforms/driver_pixhawk/mavros
+	find ./ -type f -readable -writable -exec sed -i "s/[[:blank:]]logError/ CONSOLE_BRIDGE_logError/g" {} \;
+	find ./ -type f -readable -writable -exec sed -i "s/[[:blank:]]logInform/ CONSOLE_BRIDGE_logInform/g" {} \;
+	find ./ -type f -readable -writable -exec sed -i "s/[[:blank:]]logDebug/ CONSOLE_BRIDGE_logDebug/g" {} \;
+	find ./ -type f -readable -writable -exec sed -i "s/[[:blank:]]logWarn/ CONSOLE_BRIDGE_logWarn/g" {} \;
+	cd $AEROSTACK_STACK
+	
 	echo "---------------------------"
 	echo "Installing libARCommands"
 	echo "---------------------------"
@@ -87,14 +139,25 @@ then
 	echo "Updating gazebo"
 	echo "------------------------------------------------------"
 	cd $AEROSTACK_STACK/stack/simulation_system/rotors_simulator
-	git checkout -f  stable/kinetic 
-
+	git checkout -f  stable/gazebo9 
+	
 	echo "------------------------------------------------------"
 	echo "Exporting parrot_arsdk lib"
 	echo "------------------------------------------------------"
 	echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$AEROSTACK_WORKSPACE/devel/lib/parrot_arsdk" >> ~/.bashrc
-fi
 
+	echo "------------------------------------------------------"
+	echo "Updating Eigen"
+	echo "------------------------------------------------------"
+	sudo ln -s /usr/include/eigen3/Eigen /usr/local/include/Eigen
+
+	echo "---------------------------"
+	echo "Installing Sound Play & Dependencies"
+	echo "---------------------------"
+	sudo apt-get -y install ros-$ROS_DISTRO-audio-common
+	sudo apt-get -y install libgstreamer0.10-dev libgstreamer-plugins-base0.10-dev
+	touch  $AEROSTACK_STACK/stack_deprecated/audio_common/CATKIN_IGNORE
+fi
 if [ "$ROS_DISTRO" = "melodic" ]
 	then
 	echo "----------------------------"
@@ -229,6 +292,7 @@ rosdep update
 rosdep -y install -r --from-paths ${AEROSTACK_WORKSPACE} --ignore-src --rosdistro=$ROS_DISTRO
 
 #########Install possible missing dependencies
+
 DEPENDENCIES=""
 apt-get update
 rosdep update
@@ -252,7 +316,9 @@ do
 	test $? -ne 0 || DEPENDENCIES="$DEPENDENCIES $p"
 done
 sudo apt-get install -y ros-$ROS_DISTRO-mavlink ros-$ROS_DISTRO-octomap-msgs ros-opencv-apps ros-$ROS_DISTRO-opencv-apps ros-$ROS_DISTRO-joystick-drivers ros-$ROS_DISTRO-nmea-msgs ros-$ROS_DISTRO-octomap-ros ros-$ROS_DISTRO-control-toolbox ros-$ROS_DISTRO-parrot-arsdk $DEPENDENCIES
+
 #########
-sudo apt-get remove -y ros-melodic-rotors-gazebo-plugins
+
+sudo apt-get remove -y ros-melodic-rotors-gazebo-plugins ros-noetic-rotors-gazebo-plugins
 
 echo "All dependencies installed succesfully"
