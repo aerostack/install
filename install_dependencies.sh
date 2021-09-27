@@ -58,6 +58,61 @@ if [ "$?" -ne 0 ]; then
 	exit 1
 fi
 
+if [ "$ROS_DISTRO" = "kinetic" ]
+then
+	echo "----------------------------"
+	echo "Install driver common required in kinectic"
+	echo "----------------------------"
+	mkdir -p /tmp/driver_common/src
+	cd /tmp/driver_common/src
+	git clone https://github.com/ros-drivers/driver_common
+	cd ..
+	catkin_make install -DCMAKE_INSTALL_PREFIX=/tmp/ros/$ROS_DISTRO
+	sudo cp -R /tmp/ros/$ROS_DISTRO /opt/ros/
+	rm -rf /tmp/ros
+	rm -rf /tmp/driver_common
+
+	echo "----------------------------"
+	echo "Install keyboard required in kinectic"
+	echo "----------------------------"
+	mkdir -p /tmp/keyboard/src
+	cd /tmp/keyboard/src
+	git clone https://github.com/lrse/ros-keyboard.git
+	cd ..
+	catkin_make install -DCMAKE_INSTALL_PREFIX=/tmp/ros/$ROS_DISTRO
+	sudo cp -R /tmp/ros/$ROS_DISTRO /opt/ros/
+	rm -rf /tmp/ros
+	rm -rf /tmp/keyboard
+
+	echo "---------------------------"
+	echo "Installing Sound Play & Dependencies"
+	echo "---------------------------"
+	sudo apt-get -y install ros-$ROS_DISTRO-audio-common
+	sudo apt-get -y install libgstreamer0.10-dev libgstreamer-plugins-base0.10-dev
+
+	echo "------------------------------------------------------"
+	echo "Installing qwt library"
+	echo "------------------------------------------------------"
+	sudo apt-get -y install libqwt-headers
+	sudo apt-get -y install libqwt-qt5-dev
+	sudo apt-get -y install libzbar-dev
+		
+	echo "---------------------------"
+	echo "Installing libARCommands"
+	echo "---------------------------"
+	git clone https://github.com/Parrot-Developers/libARCommands $AEROSTACK_STACK/libraries/libARCommands
+
+	echo "------------------------------------------------------"
+	echo "Updating gazebo"
+	echo "------------------------------------------------------"
+	cd $AEROSTACK_STACK/stack/simulation_system/rotors_simulator
+	git checkout -f  stable/kinetic 
+
+	echo "------------------------------------------------------"
+	echo "Exporting parrot_arsdk lib"
+	echo "------------------------------------------------------"
+	echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$AEROSTACK_WORKSPACE/devel/lib/parrot_arsdk" >> ~/.bashrc
+fi
 
 if [ "$ROS_DISTRO" = "noetic" ]
 	then
@@ -155,7 +210,7 @@ if [ "$ROS_DISTRO" = "noetic" ]
 	echo "Installing Sound Play & Dependencies"
 	echo "---------------------------"
 	sudo apt-get -y install ros-$ROS_DISTRO-audio-common
-	sudo apt-get -y install libgstreamer0.10-dev libgstreamer-plugins-base0.10-dev
+	sudo apt-get -y install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 	touch  $AEROSTACK_STACK/stack_deprecated/audio_common/CATKIN_IGNORE
 fi
 if [ "$ROS_DISTRO" = "melodic" ]
